@@ -1,0 +1,33 @@
+{
+  "name": "vite",
+  "version": "0.0.1",
+  "description": "vite源码解析",
+  "scripts": {
+    "watch": "npx nodemon --watch docs -e md --exec pnpm run docs",
+    "docs": "vitepress dev docs --temp",
+    "docs:build": "set NODE_OPTIONS=--max_old_space_size=4096 & vitepress --max_old_space_size=4096 build docs",
+    "docs:serve": "vitepress serve docs",
+    "add": "pnpm run del & node ./doc-deal/addGitalk.js",
+    "del": "node ./doc-deal/delGitalk.js"
+  },
+  "dependencies": {
+    "gitalk": "^1.8.0",
+    "md5": "^2.3.0",
+    "vitepress-plugin-search": "1.0.4-alpha.19"
+  },
+  "devDependencies": {
+    "@types/node": "^18.15.11",
+    "vitepress": "1.0.0-alpha.64"
+  },
+  "license": "MIT",
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "vue",
+        "react",
+        "react-dom",
+        "@algolia/client-search"
+      ]
+    }
+  }
+}
