@@ -1,4 +1,4 @@
-# vite-plugin-legacy
+# @vitejs/plugin-legacy
 
 ## src/index.ts完整代码
 
@@ -965,7 +965,21 @@ function toAssetPathFromHtml(
 
 在 `toOutputFilePathInHtml` 函数中，通过 `type` 参数和其他信息确定了输出文件的类型和生成方式，然后使用 `toRelative` 函数将 `filename` 转换为相对路径。最后，将相对路径与基本路径组合起来，形成最终的文件路径。
 
-## 是否生成Legacy格式的打包文件
+## 判断chunk是否是Legacy格式
+
+```ts
+function isLegacyChunk(chunk: RenderedChunk, options: NormalizedOutputOptions) {
+  return options.format === 'system' && chunk.fileName.includes('-legacy')
+}
+```
+
+这段代码是一个用于判断是否为 legacy chunk 的函数。函数接收两个参数：一个 RenderedChunk 对象和一个经过规范化后的输出选项对象 options。
+
+函数返回值为一个布尔值，如果 options.format 为 'system' 并且 chunk.fileName 包含 '-legacy' 字符串，则返回 true，否则返回 false。
+
+因此，可以根据该函数判断当前 chunk 是否为 legacy chunk。
+
+## 判断Bundle入口是否是Legacy格式
 
 ```ts
 function isLegacyBundle(
@@ -983,7 +997,7 @@ function isLegacyBundle(
 ```
 
 
-这个函数的作用是判断是否生成Legacy格式的打包文件。
+这个函数的作用是判断Bundle入口是否是Legacy格式
 
 在 Vite 构建系统中，当我们需要为较老的浏览器（比如 IE 11）打包时，需要使用Legacy格式的打包文件，以便在运行时自动加载 polyfill 而不需要手动引入。
 
@@ -1222,7 +1236,11 @@ export default defineBuildConfig({
 }
 ```
 
-### `main`, `module` 和 `types`字段
+### files字段
+
+`files`字段用于指定npm包发布时需要包含哪些文件。如果你不在`files`字段中列出某些文件，那么当你发布包时，这些文件将不会被包含在内。该字段是一个数组，其中的每个元素是一个文件或文件夹的路径。当你运行`npm publish`时，npm会检查你的包目录中是否有列出的每个文件和文件夹，并将它们都打包并发布到npm仓库中。默认情况下，`files`字段中包含了一些常见的文件和文件夹，比如`README`，`LICENSE`等。如果你想要发布的内容更丰富，可以将需要发布的文件和文件夹添加到该字段中。
+
+### `main`, `module` 和 `types`
 
 ```json
   "main": "./dist/index.cjs",
@@ -1286,3 +1304,39 @@ import myFunction from './myModule.js';
 ```
 
 `peerDependencies` 是一种在 `npm` 包中声明依赖关系的方式，它用于声明当前包所依赖的其他包的最低版本，同时也表明当前包与所依赖包的版本是兼容的。与普通的 `dependencies` 不同，`peerDependencies` 并不会被安装到当前包的 `node_modules` 目录中。相反，它会被安装在使用该包的其他包的 `node_modules` 目录中，以确保依赖关系正确地解析。在使用 `npm` 作为包管理器时，`peerDependencies` 可以用于进行依赖冲突的解决，它可以告诉 `npm` 将依赖的解析交给使用该包的其他包处理。
+
+## readme
+
+Vite的默认浏览器支持基线是本地ESM，本地ESM动态导入和import.meta。当为生产环境构建时，此插件提供了对不支持这些特性的旧版浏览器的支持。
+
+默认情况下，此插件将执行以下操作：
+
+为最终打包中的每个块生成相应的遗留版块，使用@babel/preset-env进行转换，并作为SystemJS模块发出（仍支持代码拆分！）。
+
+生成一个包括SystemJS运行时和根据指定的浏览器目标和实际使用情况确定的任何必要的polyfills的polyfill块。
+
+向生成的HTML中注入`<script nomodule>`标签，以在不支持广泛特性的浏览器中有条件地加载polyfills和遗留版块。
+
+注入import.meta.env.LEGACY环境变量，它仅在遗留版生产构建中为true，在所有其他情况下为false。
+
+### additionalLegacyPolyfills
+
+additionalLegacyPolyfills是一个字符串数组，用于添加自定义导入到legacy代码(polyfills)中。由于基于使用情况的polyfill检测只涵盖了ES语言特性，因此可能需要使用该选项手动指定其他DOM API的polyfills。
+
+注意：如果需要为现代和legacy代码(polyfills)都添加额外的polyfills，可以直接在应用程序源代码中导入它们。
+
+### 内容安全策略（Content Security Policy，CSP）
+
+Legacy插件需要使用内联脚本来修复Safari 10.1的非模块化支持、SystemJS初始化以及动态导入回退。如果您有严格的CSP策略要求，则需要将相应的哈希添加到您的script-src列表中：
+
+- `sha256-MS6/3FCg4WjP9gwgaBGwLpRCY6fZBgwmhVCdrPrNf3E=`
+- `sha256-tQjf8gvb2ROOMapIxFvFAYBeUJ0v1HCbOcSmDNXGtDo=`
+- `sha256-p7PoC97FO+Lu90RNjGWxhbm13yALSR4xzV8vaDhaQBo=`
+- `sha256-+5XkZFazzJo8n0iOP4ti/cLCMUudTf//Mzkb7xNPXIc=`
+
+这些值（不包括sha256-前缀）也可以通过以下方式获取：
+
+import { cspHashes } from '@vitejs/plugin-legacy'
+
+在使用regenerator-runtime polyfill时，它会尝试使用globalThis对象来注册自身。如果globalThis不可用（它是相当新的功能，包括IE 11在内并不广泛支持），它会尝试执行动态Function(...)调用，这会违反CSP。为了避免在缺少globalThis的情况下执行动态eval，请考虑将core-js/proposals/global-this添加到additionalLegacyPolyfills来定义它。
+
