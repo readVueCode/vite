@@ -965,6 +965,61 @@ function toAssetPathFromHtml(
 
 在 `toOutputFilePathInHtml` 函数中，通过 `type` 参数和其他信息确定了输出文件的类型和生成方式，然后使用 `toRelative` 函数将 `filename` 转换为相对路径。最后，将相对路径与基本路径组合起来，形成最终的文件路径。
 
+## 是否生成Legacy格式的打包文件
+
+```ts
+function isLegacyBundle(
+  bundle: OutputBundle,
+  options: NormalizedOutputOptions,
+) {
+  if (options.format === 'system') {
+    const entryChunk = Object.values(bundle).find(
+      (output) => output.type === 'chunk' && output.isEntry,
+    )
+    return !!entryChunk && entryChunk.fileName.includes('-legacy')
+  }
+  return false
+}
+```
+
+
+这个函数的作用是判断是否生成Legacy格式的打包文件。
+
+在 Vite 构建系统中，当我们需要为较老的浏览器（比如 IE 11）打包时，需要使用Legacy格式的打包文件，以便在运行时自动加载 polyfill 而不需要手动引入。
+
+### 具体代码逻辑
+
+在该函数中，首先判断输出的文件格式是否为 `system`。
+
+如果是，再判断入口 chunk 文件是否包含 `-legacy` 字符串。如果存在，就说明该 chunk 是Legacy格式的，返回 `true`，否则返回 `false`。
+
+1. 找到输出文件中的入口文件对应的 `chunk` 对象，使用了 `Object.values()` 方法来取出 `bundle` 对象中所有的值（即输出文件对象），然后使用 `Array.prototype.find()` 方法来找到满足条件的 `chunk` 对象。条件为 `output.type === 'chunk' && output.isEntry`，即 `output` 是一个 `chunk` 对象且是入口文件。其中 `output.type` 表示输出类型，可以是 `chunk` 或者 `asset`，而 `output.isEntry` 表示该输出文件是否是入口文件。如果找到了符合条件的 `chunk` 对象，则返回该对象，否则返回 `undefined`。
+2. 如果entryChunk存在且它的文件名包含'-legacy'，则返回true；否则返回false。!!是将其强制转换为布尔类型。
+
+## babel插件：记录和移除导入 polyfill 的 import 声明
+
+```ts
+function recordAndRemovePolyfillBabelPlugin(
+  polyfills: Set<string>,
+): BabelPlugin {
+  return ({ types: t }: { types: typeof BabelTypes }): BabelPlugin => ({
+    name: 'vite-remove-polyfill-import',
+    post({ path }) {
+      path.get('body').forEach((p) => {
+        if (t.isImportDeclaration(p.node)) {
+          polyfills.add(p.node.source.value)
+          p.remove()
+        }
+      })
+    },
+  })
+}
+```
+
+这是一个Babel插件，名为 `vite-remove-polyfill-import`。该插件的作用是记录和移除导入了 polyfill 的 import 声明。
+
+函数接收一个 polyfills 集合作为参数。当遍历到 import 声明时，插件会将导入的模块字符串加入 polyfills 集合中，并移除该 import 声明。最终，polyfills 集合会记录下所有导入了 polyfill 的模块。
+
 ## babel插件：将代码中的特定标记替换为布尔字面量 `true`
 
 ```ts
@@ -1069,3 +1124,165 @@ export const cspHashes = [
 CSP（Content Security Policy）是一种Web应用程序的安全策略，允许站点管理员通过白名单机制告诉浏览器哪些内容是可以被允许执行或加载的。在CSP策略中，可以指定脚本、样式表、图像、音频等类型的白名单，而浏览器将只执行或加载这些白名单中的内容，可以有效地减少Web应用程序遭受XSS、数据注入等攻击的风险。
 
 在这个代码片段中，safari10NoModuleFix、systemJSInlineCode、detectModernBrowserCode、dynamicFallbackInlineCode这四个字符串常量分别是一些JavaScript代码片段，这些代码片段被认为是需要允许执行的。createHash('sha256')是Node.js内置的哈希计算方法，使用sha256算法对每个代码片段进行哈希计算，并使用base64编码生成哈希值。最终，所有哈希值被放到cspHashes数组中，以便后续在CSP策略中使用。
+
+## unbuild打包配置
+
+build.config.ts
+
+```ts
+import { defineBuildConfig } from 'unbuild'
+
+export default defineBuildConfig({
+  entries: ['src/index'],
+  clean: true,
+  declaration: true,
+  rollup: {
+    emitCJS: true,
+    inlineDependencies: true,
+  },
+})
+```
+
+这段代码使用了 `unbuild` 库，该库提供了一个快速构建的配置生成器 `defineBuildConfig`，其接受一个配置对象作为参数，其中包括以下选项：
+
+- `entries`: 入口文件数组。
+- `clean`: 是否清除输出目录。
+- `declaration`: 是否生成 `.d.ts` 声明文件。
+- Rollup 打包选项，其中包括以下选项：
+  - `emitCJS`: 是否同时输出 CommonJS 格式。
+  - `inlineDependencies`: 是否内联依赖。
+
+通过使用该库，可以快速生成符合规范的构建配置，并且避免手动编写复杂的构建配置文件。
+
+## package.json
+
+### 完整内容
+
+```json
+{
+  "name": "@vitejs/plugin-legacy",
+  "version": "4.0.3",
+  "license": "MIT",
+  "author": "Evan You",
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "frontend",
+    "vite",
+    "vite-plugin",
+    "@vitejs/plugin-legacy"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "unbuild --stub",
+    "build": "unbuild && pnpm run patch-cjs",
+    "patch-cjs": "tsx ../../scripts/patchCJS.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": "^14.18.0 || >=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitejs/vite.git",
+    "directory": "packages/plugin-legacy"
+  },
+  "bugs": {
+    "url": "https://github.com/vitejs/vite/issues"
+  },
+  "homepage": "https://github.com/vitejs/vite/tree/main/packages/plugin-legacy#readme",
+  "dependencies": {
+    "@babel/core": "^7.21.4",
+    "@babel/preset-env": "^7.21.4",
+    "browserslist": "^4.21.5",
+    "core-js": "^3.30.1",
+    "magic-string": "^0.30.0",
+    "regenerator-runtime": "^0.13.11",
+    "systemjs": "^6.14.1"
+  },
+  "peerDependencies": {
+    "terser": "^5.4.0",
+    "vite": "^4.0.0"
+  },
+  "devDependencies": {
+    "acorn": "^8.8.2",
+    "picocolors": "^1.0.0",
+    "vite": "workspace:*"
+  }
+}
+```
+
+### `main`, `module` 和 `types`字段
+
+```json
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+```
+
+这里是`package.json`中的`main`, `module` 和 `types`字段，分别用来指定 CommonJS 模块的入口文件、ES Module 模块的入口文件以及 TypeScript 类型定义文件的位置。
+
+通常，在 Node.js 环境下，使用 CommonJS 规范加载模块，而在浏览器环境下，使用 ES Module 规范加载模块。`types` 字段用于提供库的类型定义文件，便于 TypeScript 编译器对该库的类型进行推断。
+
+### exports
+
+```json
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+```
+
+这是一个 package.json 中的 exports 字段，它是 Node.js 模块规范的一部分，用于指定模块的导入导出行为。在这个例子中，指定了模块的三种不同格式的导出方式：
+
+- types: 导出 TypeScript 类型定义文件，以供 TypeScript 或其他支持导入类型定义的工具使用。
+- import: 导出 ES Module 格式的代码，以供现代浏览器或 Node.js 13+ 版本使用。
+- require: 导出 CommonJS 格式的代码，以供旧版浏览器或 Node.js 12 及以下版本使用。
+
+在使用这个 package 作为依赖时，Node.js 会根据当前运行环境的版本和模块引入方式，自动选择对应的导出方式，从而保证模块在不同的环境中都能正确地导入和使用。
+
+在 `package.json` 中的 `"exports"` 字段中，`"."` 表示默认导出，也就是当一个模块被导入时，如果没有指定导入模块中的某个具体项，就会默认导入该模块中的 `"."`。例如，在一个 JavaScript 模块中，如果有一个默认导出，它就可以被导入：
+
+```js
+// myModule.js
+export default function myFunction() {}
+
+// app.js
+import myFunction from './myModule.js';
+```
+
+在上面的例子中，`import myFunction from './myModule.js';` 语句默认导入了 `./myModule.js` 中的默认导出项，即 `function myFunction() {}`。由于 `exports` 字段中定义了默认导出项的路径和格式，`import` 语句就可以正确地找到并加载该项。
+
+### `exports` 字段和 `main`, `module`, `types` 字段区别
+
+`exports` 字段和 `main`, `module`, `types` 字段都是用来告诉其他模块系统（如 CommonJS、ESM、TypeScript）如何导入当前 package 的入口文件以及类型定义等。
+
+但是，`exports` 比 `main`, `module`, `types` 更加灵活。`exports` 的值是一个对象，可以定义多个入口文件，每个入口文件都可以指定不同的导入方式、路径、文件名等等，这种灵活性可以更好地适应不同的模块系统和打包工具的要求。
+
+同时，`exports` 字段还支持一些特殊的键，例如 `import` 和 `require`，这些键可以让你定义不同的导入方式，比如支持 ESM 和 CommonJS 的导入方式。
+
+而 `main`, `module`, `types` 字段则比较固定，它们只能定义单个入口文件或类型定义文件，不能定义多个入口文件以及其他导入方式。通常情况下，这些字段仍然会被大多数工具和模块系统所支持，而 `exports` 则是一个比较新的标准，可能还不是所有工具和模块系统都能完全支持。
+
+### peerDependencies
+
+```json
+ "peerDependencies": {
+    "terser": "^5.4.0",
+    "vite": "^4.0.0"
+  },
+```
+
+`peerDependencies` 是一种在 `npm` 包中声明依赖关系的方式，它用于声明当前包所依赖的其他包的最低版本，同时也表明当前包与所依赖包的版本是兼容的。与普通的 `dependencies` 不同，`peerDependencies` 并不会被安装到当前包的 `node_modules` 目录中。相反，它会被安装在使用该包的其他包的 `node_modules` 目录中，以确保依赖关系正确地解析。在使用 `npm` 作为包管理器时，`peerDependencies` 可以用于进行依赖冲突的解决，它可以告诉 `npm` 将依赖的解析交给使用该包的其他包处理。
