@@ -1,0 +1,1 @@
+import{_ as s,c as n,o as a,U as p}from"./chunks/framework.29dee80d.js";const d=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"指南/3.sourceMap.md","lastUpdated":1683166191000}'),l={name:"指南/3.sourceMap.md"},o=p("",11),e=[o];function c(r,t,B,y,F,i){return a(),n("div",null,e)}const C=s(l,[["render",c]]);export{d as __pageData,C as default};
