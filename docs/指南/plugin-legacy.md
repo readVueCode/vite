@@ -1,6 +1,6 @@
 # vite-plugin-legacy
 
-## 完整代码
+## src/index.ts完整代码
 
 vite-plugin-legacy核心代码其实也就八百多行
 
@@ -964,3 +964,108 @@ function toAssetPathFromHtml(
 该函数首先使用 `normalizePath` 函数将 `htmlPath` 标准化为一个统一格式的路径字符串。然后，它通过调用 `getBaseInHTML` 函数获取 HTML 文件的基本路径，基本路径是相对于该文件的引用路径的起始部分。这个基本路径将与 `filename` 结合使用，生成最终的文件路径。为此，该函数使用 `toOutputFilePathInHtml` 函数将 `filename` 转换为输出路径。
 
 在 `toOutputFilePathInHtml` 函数中，通过 `type` 参数和其他信息确定了输出文件的类型和生成方式，然后使用 `toRelative` 函数将 `filename` 转换为相对路径。最后，将相对路径与基本路径组合起来，形成最终的文件路径。
+
+## babel插件：将代码中的特定标记替换为布尔字面量 `true`
+
+```ts
+const legacyEnvVarMarker = `__VITE_IS_LEGACY__`
+```
+
+```ts
+function replaceLegacyEnvBabelPlugin(): BabelPlugin {
+  return ({ types: t }): BabelPlugin => ({
+    name: 'vite-replace-env-legacy',
+    visitor: {
+      Identifier(path) {
+        if (path.node.name === legacyEnvVarMarker) {
+          path.replaceWith(t.booleanLiteral(true))
+        }
+      },
+    },
+  })
+}
+```
+
+
+这是一个返回 Babel 插件的函数，用于将代码中的特定标记替换为布尔字面量 `true`。该函数返回的插件名为 `vite-replace-env-legacy`，它的功能是针对 AST 树中的 `Identifier` 节点，如果其名称为指定的 `legacyEnvVarMarker` 标记，则将其替换为布尔字面量 `true`。
+
+该插件的实现是一个对象，包含一个名为 `visitor` 的属性。该属性的值是一个包含了一个 `Identifier` 方法的对象，该方法用于遍历 AST 树的 Identifier 节点，并在遍历到标记节点时进行替换。在这个方法中，如果遍历到了一个名称为 `legacyEnvVarMarker` 的节点，则通过 `path.replaceWith` 方法将其替换为一个布尔字面量节点。
+
+### ({ types: t })
+
+这行代码使用了对象解构赋值，它将传入的对象中的 `types` 属性提取出来，赋值给变量 `t`，以便后续的代码可以使用 `t` 来访问 `types` 属性。这样写的好处是可以让代码更加简洁易懂，同时可以减少不必要的代码量
+
+在 Babel 插件中，插件作者需要通过 Babel 的 API 来创建新的 AST 节点，这些节点可以通过访问 `@babel/types` 模块来创建。当插件被 Babel 调用时，Babel 会将一个包含 Babel API 的对象传递给插件函数，这个对象通常被命名为 `babel`，而 `types` 就是其中的一个属性。通过 `{ types: t }` 的写法，插件可以将 `t` 作为 Babel API 对象的一部分进行引用。
+
+因此，在插件函数中使用 `{ types: t }`，就可以通过 `t` 来创建新的 AST 节点，例如在 `replaceLegacyEnvBabelPlugin` 函数中，通过 `{ types: t }` 就可以使用 `t.booleanLiteral` 方法创建一个布尔字面量节点，用于替换指定的节点。
+
+### path.replaceWith
+
+`path.replaceWith` 是 Babel 的 API 之一，用于替换 AST 树上的节点。它接受一个新节点作为参数，并将其替换当前节点。
+
+在 Babel 插件中，`path` 代表当前遍历到的节点，可以通过调用 `path.replaceWith` 来替换这个节点。例如，在上面提到的 `replaceLegacyEnvBabelPlugin` 函数中，当遍历到 `Identifier` 节点，并且该节点名称为指定的 `legacyEnvVarMarker` 标记时，就会调用 `path.replaceWith` 方法将其替换为一个布尔字面量节点。
+
+需要注意的是，Babel 插件中对 AST 树的修改都是基于浅拷贝的，即在原有的节点上进行修改并返回新节点，而不是直接在原有节点上修改。这是因为在遍历 AST 树时，Babel 会缓存节点信息以便后续访问，如果直接修改原有节点可能会影响到后续访问的正确性。因此，使用 `path.replaceWith` 方法来替换节点是一种比较安全的方式。
+
+### 插件用处
+
+这个插件的作用是在 Babel 转译代码的过程中，替换掉 Vite 早期版本中用于环境变量标识的特殊变量，使其能够在新版本的 Vite 中正常工作。
+
+在 Vite 1.x 版本中，开发者可以在 `.env` 文件中定义环境变量，然后在代码中通过 `$VITE_XXX` 这种形式的特殊变量来访问这些环境变量。而在 Vite 2.x 版本中，这种访问方式被废弃了，取而代之的是在代码中使用 `import.meta.env.XXX` 来访问环境变量。
+
+为了让老的项目能够平滑地升级到 Vite 2.x，Vite 提供了一个 `replaceLegacyEnvBabelPlugin` 插件，它会在 Babel 转译代码的过程中，将所有出现 `$VITE_XXX` 的地方替换为 `true`，以避免代码中使用废弃的特殊变量而导致运行时错误。
+
+## babel插件：将代码块包裹在 IIFE（立即调用的函数表达式）中
+
+```js
+function wrapIIFEBabelPlugin(): BabelPlugin {
+  return ({ types: t, template }): BabelPlugin => {
+    const buildIIFE = template(';(function(){%%body%%})();')
+
+    return {
+      name: 'vite-wrap-iife',
+      post({ path }) {
+        if (!this.isWrapped) {
+          this.isWrapped = true
+          path.replaceWith(t.program(buildIIFE({ body: path.node.body })))
+        }
+      },
+    }
+  }
+}
+```
+
+这是一个 Babel 插件，用于将代码块包裹在 IIFE（立即调用的函数表达式）中。
+
+这个插件会在 `post` 阶段被调用，对 AST 进行修改。具体地，它检查 AST 是否已被包裹在 IIFE 中，如果没有，则使用 Babel 的模板语法，生成一个 IIFE，并将当前 AST 的 body 作为参数传入。
+
+这个插件的主要作用是帮助确保模块中的变量作用域不会泄露到全局作用域，从而提高代码的可维护性和安全性。
+
+###  `template(';(function(){%%body%%})();')`
+
+`template` 是 Babel 提供的一个函数，它可以将字符串模板编译成可执行的函数，函数返回一个 `AST` 节点。
+
+`;(function(){%%body%%})();` 就是一个 IIFE 的字符串模板，其中 `%%body%%` 是一个占位符，它将被实际的 `AST` 代码块所替代。这个模板会被编译成一个函数，这个函数会返回一个 `AST` 节点，表示一个 IIFE，其中 `%%body%%` 部分会被替换成传入的 `AST` 代码块。最终，这个 IIFE 的代码会被插入到目标代码中，从而将代码块包裹在一个函数作用域中。
+
+### this.isWrapped
+
+这里的 `this.isWrapped` 是一个标记，用于标记当前的代码是否已经被包裹在 IIFE 中了。这个标记是通过 `post` 钩子函数上下文对象来实现的，因为在 `post` 钩子函数中，上下文对象 `this` 会被持久化，这样就可以实现跨多次调用时共享状态。
+
+具体来说，当第一次调用 `post` 钩子函数时，`this.isWrapped` 还不存在，所以会将代码块包裹在 IIFE 中，并将 `this.isWrapped` 标记为 `true`。当下一次调用 `post` 钩子函数时，由于 `this.isWrapped` 已经被标记为 `true`，所以不会再次将代码块包裹在 IIFE 中。这样就保证了代码只会被包裹一次。
+
+## 代码片段进行哈希计算并生成CSP哈希列表
+
+```ts
+export const cspHashes = [
+  safari10NoModuleFix,
+  systemJSInlineCode,
+  detectModernBrowserCode,
+  dynamicFallbackInlineCode,
+].map((i) => createHash('sha256').update(i).digest('base64'))
+```
+
+将一些代码片段进行哈希计算并生成CSP哈希列表。
+
+CSP（Content Security Policy）是一种Web应用程序的安全策略，允许站点管理员通过白名单机制告诉浏览器哪些内容是可以被允许执行或加载的。在CSP策略中，可以指定脚本、样式表、图像、音频等类型的白名单，而浏览器将只执行或加载这些白名单中的内容，可以有效地减少Web应用程序遭受XSS、数据注入等攻击的风险。
+
+在这个代码片段中，safari10NoModuleFix、systemJSInlineCode、detectModernBrowserCode、dynamicFallbackInlineCode这四个字符串常量分别是一些JavaScript代码片段，这些代码片段被认为是需要允许执行的。createHash('sha256')是Node.js内置的哈希计算方法，使用sha256算法对每个代码片段进行哈希计算，并使用base64编码生成哈希值。最终，所有哈希值被放到cspHashes数组中，以便后续在CSP策略中使用。
