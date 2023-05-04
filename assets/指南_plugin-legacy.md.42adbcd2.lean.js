@@ -1,1 +1,0 @@
-import{_ as s,c as a,o as n,U as e}from"./chunks/framework.29dee80d.js";const F=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"指南/plugin-legacy.md","lastUpdated":1682653683000}'),l={name:"指南/plugin-legacy.md"},o=e("",3),p=[o];function c(t,r,d,i,b,y){return n(),a("div",null,p)}const u=s(l,[["render",c]]);export{F as __pageData,u as default};
