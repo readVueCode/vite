@@ -965,6 +965,40 @@ function toAssetPathFromHtml(
 
 在 `toOutputFilePathInHtml` 函数中，通过 `type` 参数和其他信息确定了输出文件的类型和生成方式，然后使用 `toRelative` 函数将 `filename` 转换为相对路径。最后，将相对路径与基本路径组合起来，形成最终的文件路径。
 
+## vite:legacy-polyfills
+
+```ts
+const polyfillId = '\0vite/legacy-polyfills'
+
+function polyfillsPlugin(
+  imports: Set<string>,
+  excludeSystemJS?: boolean,
+): Plugin {
+  return {
+    name: 'vite:legacy-polyfills',
+    resolveId(id) {
+      if (id === polyfillId) {
+        return id
+      }
+    },
+    load(id) {
+      if (id === polyfillId) {
+        return (
+          [...imports].map((i) => `import ${JSON.stringify(i)};`).join('') +
+          (excludeSystemJS ? '' : `import "systemjs/dist/s.min.js";`)
+        )
+      }
+    },
+  }
+}
+```
+
+这是一个 Vite 插件，它会生成一个名为 `vite:legacy-polyfills` 的插件，用于生成 Legacy 模式需要的 polyfills。
+
+这个插件会接收两个参数，一个是一个 Set 类型的 `imports`，里面包含了需要 polyfill 的模块；另一个是一个布尔值 `excludeSystemJS`，用于指定是否要排除 SystemJS 的 polyfill。
+
+在这个插件中，定义了一个 `resolveId` 方法和一个 `load` 方法。当一个模块的 `id` 等于 `polyfillId` 时，`resolveId` 方法会将其返回，表示这个模块可以被解析。`load` 方法会根据传入的 `imports` 和 `excludeSystemJS` 参数，生成 Legacy 模式需要的 polyfills 代码，并将其返回。
+
 ## 判断chunk是否是Legacy格式
 
 ```ts
