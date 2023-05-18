@@ -1,0 +1,1 @@
+import{_ as s,c as n,o as a,U as l}from"./chunks/framework.29dee80d.js";const A=JSON.parse('{"title":"起步","description":"","frontmatter":{},"headers":[],"relativePath":"热更新/1.热更新.md","lastUpdated":1684378623000}'),p={name:"热更新/1.热更新.md"},o=l("",27),e=[o];function r(t,c,B,y,F,i){return a(),n("div",null,e)}const m=s(p,[["render",r]]);export{A as __pageData,m as default};
