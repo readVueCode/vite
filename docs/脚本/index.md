@@ -96,5 +96,39 @@ if (!import.meta.url.includes('node_modules')) {
 
 1. `import.meta.url` 是一个元数据对象，提供了有关当前模块的信息。`import.meta.url` 返回当前模块的 URL 地址。
 2. `import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串`'node_modules'`。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
-3. `await import('source-map-support').then((r) => r.default.install())` 使用动态导入的方式加载名为 `source-map-support`的模块，并调用该模块的 `install()` 方法。这段代码用于开发环境中，安装源映射支持，以便在调试时能够查看源代码而不是压缩后的代码。
+3. `await import('source-map-support').then((r) => r.default.install())` 使用动态导入的方式加载名为 `source-map-support`的模块，当 `source-map-support` 模块加载完成后，`.then()` 方法会被调用，并接收加载的模块作为参数。在这里，使用箭头函数 `(r) => r.default.install()`，其中 `r` 是加载的模块对象。`r.default` 是模块的默认导出对象，而 `.install()` 是 `source-map-support` 模块的一个方法。
+
+## profile
+
+```ts
+const profileIndex = process.argv.indexOf('--profile')
+...
+function start() {
+  return import('../dist/node/cli.js')
+}
+
+if (profileIndex > 0) {
+  process.argv.splice(profileIndex, 1)
+  const next = process.argv[profileIndex]
+  if (next && !next.startsWith('-')) {
+    process.argv.splice(profileIndex, 1)
+  }
+  const inspector = await import('node:inspector').then((r) => r.default)
+  const session = (global.__vite_profile_session = new inspector.Session())
+  session.connect()
+  session.post('Profiler.enable', () => {
+    session.post('Profiler.start', start)
+  })
+} else {
+  start()
+}
+```
+
+1. `process.argv`是一个包含命令行参数的数组。数组的第一个元素是 Node.js 的可执行文件路径，后续元素是命令行传递的参数。`.splice(profileIndex, 1)`是一个数组方法，用于修改数组。`profileIndex` 是要移除的元素的起始索引，而 `1` 表示从该索引开始，要移除的元素数量。因此，`process.argv.splice(profileIndex, 1)` 表示从 `process.argv` 数组中移除位于 `profileIndex` 索引处的一个元素，即删除命令行参数中的 `--profile` 参数。
+
+
+
+
+
+通过执行 `process.argv.splice(profileIndex, 1)`，将会移除 `process.argv` 数组中的指定元素，即删除命令行参数中的 `--profile` 参数。该操作会修改原始数组 `process.argv`。
 
