@@ -124,11 +124,36 @@ if (profileIndex > 0) {
 }
 ```
 
-1. `process.argv`是一个包含命令行参数的数组。数组的第一个元素是 Node.js 的可执行文件路径，后续元素是命令行传递的参数。`.splice(profileIndex, 1)`是一个数组方法，用于修改数组。`profileIndex` 是要移除的元素的起始索引，而 `1` 表示从该索引开始，要移除的元素数量。因此，`process.argv.splice(profileIndex, 1)` 表示从 `process.argv` 数组中移除位于 `profileIndex` 索引处的一个元素，即删除命令行参数中的 `--profile` 参数。
+1. `process.argv`是一个包含命令行参数的数组。数组的第一个元素是 Node.js 的可执行文件路径，后续元素是命令行传递的参数。`.splice(profileIndex, 1)`是一个数组方法，用于修改数组，`profileIndex` 是要移除的元素的起始索引，而 `1` 表示从该索引开始，要移除的元素数量。因此，`process.argv.splice(profileIndex, 1)` 表示从 `process.argv` 数组中移除位于 `profileIndex` 索引处的一个元素，即删除命令行参数中的 `--profile` 参数。
+
+2. 因为上一步移除位于 `profileIndex` 索引处的一个元素，所以`const next = process.argv[profileIndex]`的元素是之前元素的下一个元素，即 `--profile` 参数的下一个参数
+
+3. `if (next && !next.startsWith('-')) { ... }`：这行代码检查变量 `next` 是否存在且不以 `-` 开头。如果 `next` 存在且不以 `-` 开头，表示它是一个非选项参数，可能是与 `--profile` 相关的值。在这种情况下，需要将它从命令行参数中移除，以避免影响后续的命令行处理。
+
+4. `await import('node:inspector').then((r) => r.default)`表示使用动态导入加载 `node:inspector` 模块，并调用其 `default` 属性得到模块的默认导出对象。
+
+5. `session = (global.__vite_profile_session = new inspector.Session())`这行代码使用了链式赋值语法：将 `new inspector.Session()` 的返回值赋给了变量 `session`，同时使用链式赋值语法将该返回值也赋给了全局变量 `global.__vite_profile_session`。
+
+   通过这段代码，实现了两个操作：
+
+   - 创建了一个新的 `inspector.Session` 实例。
+   - 将该实例赋值给变量 `session`，同时也将其赋值给全局变量 `global.__vite_profile_session`。
+
+   这种链式赋值语法可以在一行代码中同时进行多个赋值操作，提供了简洁的语法形式。
 
 
 
 
 
-通过执行 `process.argv.splice(profileIndex, 1)`，将会移除 `process.argv` 数组中的指定元素，即删除命令行参数中的 `--profile` 参数。该操作会修改原始数组 `process.argv`。
+
+
+
+
+
+
+
+
+
+
+
 
