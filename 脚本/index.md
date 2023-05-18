@@ -77,7 +77,9 @@ if (!import.meta.url.includes('node_modules')) {
 }
 ```
 
-这段代码的意图是在非`node_modules`模块中尝试加载`source-map-support`库，并调用其 `install()` 方法，以提供源映射支持。用于开发环境中，方便调试和定位错误。如果加载或调用过程中发生错误，将会被捕获并忽略。
+这段代码的意图是在非`node_modules`模块中尝试使用动态导入的方式加载`source-map-support`库，并调用其 `install()` 方法，以提供源映射支持。
+
+用于开发环境中方便调试和定位错误。如果加载或调用过程中发生错误，将会被捕获并忽略。
 
 1. `import.meta.url` 是一个元数据对象，提供了有关当前模块的信息。`import.meta.url` 返回当前模块的 URL 地址。
 2. `import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串 'node_modules'。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
