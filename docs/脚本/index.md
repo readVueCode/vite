@@ -66,6 +66,19 @@ if (profileIndex > 0) {
 }
 ```
 
+## node:perf_hooks
+
+```ts
+import { performance } from 'node:perf_hooks'
+...
+global.__vite_start_time = performance.now()
+```
+
+在 Node.js 环境中使用 `perf_hooks` 模块，通过 `performance.now()` 方法获取当前时间戳，并将其保存在全局变量 `__vite_start_time` 中，以便后续在代码中使用这个起始时间点进行性能分析和计算时间差等操作。
+
+1. `import { performance } from 'node:perf_hooks'` 用于从 Node.js 的内置模块 `perf_hooks` 中导入 `performance` 对象。`perf_hooks` 模块提供了一组用于测量性能的工具，其中 `performance` 对象是其中一个重要的对象，用于获取高精度的时间戳和测量性能的指标。
+2. `global.__vite_start_time = performance.now()` 使用 `performance.now()` 方法获取当前的高精度时间戳，并将其赋值给全局变量 `__vite_start_time`。`performance.now()` 返回从性能计时器的起点（通常是脚本开始执行的时间）到当前时间的毫秒数。
+
 ## 使用动态导入的方式加载`source-map-support`库
 
 ```js
@@ -82,6 +95,6 @@ if (!import.meta.url.includes('node_modules')) {
 用于开发环境中方便调试和定位错误。如果加载或调用过程中发生错误，将会被捕获并忽略。
 
 1. `import.meta.url` 是一个元数据对象，提供了有关当前模块的信息。`import.meta.url` 返回当前模块的 URL 地址。
-2. `import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串 'node_modules'。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
-3. `await import('source-map-support').then((r) => r.default.install())` 使用动态导入的方式加载名为 'source-map-support' 的模块，并调用该模块的 `install()` 方法。这段代码用于开发环境中，安装源映射支持，以便在调试时能够查看源代码而不是压缩后的代码。
+2. `import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串`'node_modules'`。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
+3. `await import('source-map-support').then((r) => r.default.install())` 使用动态导入的方式加载名为 `source-map-support`的模块，并调用该模块的 `install()` 方法。这段代码用于开发环境中，安装源映射支持，以便在调试时能够查看源代码而不是压缩后的代码。
 
