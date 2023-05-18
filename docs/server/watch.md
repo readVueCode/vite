@@ -1,5 +1,7 @@
 # 完整代码
 
+> 文件路径 `src/node/watch.ts`
+
 ```ts
 import glob from 'fast-glob'
 import type { WatchOptions } from 'dep-types/chokidar'
@@ -30,7 +32,7 @@ export function resolveChokidarOptions(
 
 从这里看，vite是使用`chokidar`这个库做文件监听的，这里是编写了一个`resolvedWatchOptions`函数解析和合并`chokidar`的配置选项
 
-## resolveChokidarOptions函数
+## 解析和合并`chokidar`的选项对象
 
 ```ts
 export function resolveChokidarOptions(
@@ -43,9 +45,9 @@ export function resolveChokidarOptions(
 
 该函数接受两个参数：`config`和`options`。函数的目的是解析和合并`chokidar`的选项对象，返回一个新的选项对象。
 
-### 这个函数在哪里被调用？
+这个函数在`src/node/server/index.ts`中被调用，具体内容请查看`index.md`
 
-## 导出options中的ignored配置项与其他配置项
+## 导出配置项 `options` 中的 `ignored` 与其他属性
 
 ```ts
  const { ignored = [], ...otherOptions } = options ?? {}
@@ -73,7 +75,7 @@ export function resolveChokidarOptions(
    
 4. 解构赋值、对象展开运算符的学习可以查看[阮一峰es6教程](https://www.bookstack.cn/read/es6-3rd/spilt.6.docs-object.md)
 
-## 生成一个完整的Chokidar选项对象
+## 生成一个完整的chokidar选项对象
 
 ```ts
   const resolvedWatchOptions: WatchOptions = {
