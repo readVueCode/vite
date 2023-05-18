@@ -45,7 +45,7 @@ export function resolveChokidarOptions(
 
 该函数接受两个参数：`config`和`options`。函数的目的是解析和合并`chokidar`的选项对象，返回一个新的选项对象。
 
-这个函数在`src/node/server/index.ts`中被调用，具体内容请查看`index.md`
+这个函数在`src/node/server/index.ts`中被调用，具体内容请查看`server/index.md`
 
 ## 导出配置项 `options` 中的 `ignored` 与其他属性
 
