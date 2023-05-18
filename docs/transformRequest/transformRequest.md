@@ -2,63 +2,130 @@
 
 source-map是一个用于调试JavaScript代码的技术，它可以将经过压缩的JavaScript代码映射回其原始源代码的位置。在开发大型JavaScript应用程序时，使用source-map可以帮助开发人员更快地调试代码并定位其中的错误。
 
-Vite使用`convert-source-map`库进行source-map操作。
+## transformRequest
 
-## convert-source-map
+```ts
+export function transformRequest(
+  url: string,
+  server: ViteDevServer,
+  options: TransformOptions = {},
+): Promise<TransformResult | null> {
+  const cacheKey = (options.ssr ? 'ssr:' : options.html ? 'html:' : '') + url
 
-`convert-source-map` 是一个可以转换source-map为不同格式，或从不同格式转换source-map，并且允许增改属性的库。
+  // This module may get invalidated while we are processing it. For example
+  // when a full page reload is needed after the re-processing of pre-bundled
+  // dependencies when a missing dep is discovered. We save the current time
+  // to compare it to the last invalidation performed to know if we should
+  // cache the result of the transformation or we should discard it as stale.
+  //
+  // A module can be invalidated due to:
+  // 1. A full reload because of pre-bundling newly discovered deps
+  // 2. A full reload after a config change
+  // 3. The file that generated the module changed
+  // 4. Invalidation for a virtual module
+  //
+  // For 1 and 2, a new request for this module will be issued after
+  // the invalidation as part of the browser reloading the page. For 3 and 4
+  // there may not be a new request right away because of HMR handling.
+  // In all cases, the next time this module is requested, it should be
+  // re-processed.
+  //
+  // We save the timestamp when we start processing and compare it with the
+  // last time this module is invalidated
+  const timestamp = Date.now()
 
-```js
-var convert = require('convert-source-map');
+  const pending = server._pendingRequests.get(cacheKey)
+  if (pending) {
+    return server.moduleGraph
+      .getModuleByUrl(removeTimestampQuery(url), options.ssr)
+      .then((module) => {
+        if (!module || pending.timestamp > module.lastInvalidationTimestamp) {
+          // The pending request is still valid, we can safely reuse its result
+          return pending.request
+        } else {
+          // Request 1 for module A     (pending.timestamp)
+          // Invalidate module A        (module.lastInvalidationTimestamp)
+          // Request 2 for module A     (timestamp)
 
-var json = convert
-  .fromComment('//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYnVpbGQvZm9vLm1pbi5qcyIsInNvdXJjZXMiOlsic3JjL2Zvby5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSIsInNvdXJjZVJvb3QiOiIvIn0=')
-  .toJSON();
+          // First request has been invalidated, abort it to clear the cache,
+          // then perform a new doTransform.
+          pending.abort()
+          return transformRequest(url, server, options)
+        }
+      })
+  }
 
-var modified = convert
-  .fromComment('//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiYnVpbGQvZm9vLm1pbi5qcyIsInNvdXJjZXMiOlsic3JjL2Zvby5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSIsInNvdXJjZVJvb3QiOiIvIn0=')
-  .setProperty('sources', [ 'SRC/FOO.JS' ])
-  .toJSON();
+  const request = doTransform(url, server, options, timestamp)
 
-console.log(json);
-console.log(modified);
+  // Avoid clearing the cache of future requests if aborted
+  let cleared = false
+  const clearCache = () => {
+    if (!cleared) {
+      server._pendingRequests.delete(cacheKey)
+      cleared = true
+    }
+  }
+
+  // Cache the request and clear it once processing is done
+  server._pendingRequests.set(cacheKey, {
+    request,
+    timestamp,
+    abort: clearCache,
+  })
+  request.then(clearCache, clearCache)
+
+  return request
+}
 ```
 
-```js
-{"version":3,"file":"build/foo.min.js","sources":["src/foo.js"],"names":[],"mappings":"AAAA","sourceRoot":"/"}
-{"version":3,"file":"build/foo.min.js","sources":["SRC/FOO.JS"],"names":[],"mappings":"AAAA","sourceRoot":"/"}
+## doTransform
+
+```ts
+async function doTransform(
+  url: string,
+  server: ViteDevServer,
+  options: TransformOptions,
+  timestamp: number,
+) {
+  url = removeTimestampQuery(url)
+
+  const { config, pluginContainer } = server
+  const prettyUrl = debugCache ? prettifyUrl(url, config.root) : ''
+  const ssr = !!options.ssr
+
+  const module = await server.moduleGraph.getModuleByUrl(url, ssr)
+
+  // check if we have a fresh cache
+  const cached =
+    module && (ssr ? module.ssrTransformResult : module.transformResult)
+  if (cached) {
+    // TODO: check if the module is "partially invalidated" - i.e. an import
+    // down the chain has been fully invalidated, but this current module's
+    // content has not changed.
+    // in this case, we can reuse its previous cached result and only update
+    // its import timestamps.
+
+    debugCache?.(`[memory] ${prettyUrl}`)
+    return cached
+  }
+
+  // resolve
+  const id =
+    module?.id ??
+    (await pluginContainer.resolveId(url, undefined, { ssr }))?.id ??
+    url
+
+  const result = loadAndTransform(id, url, server, options, timestamp)
+
+  getDepsOptimizer(config, ssr)?.delayDepsOptimizerUntil(id, () => result)
+
+  return result
+}
 ```
 
-### 升级
-
- 在 v2.0.0 之前，`fromMapFileComment` 和 `fromMapFileSource` 函数接受一个字符串类型的目录路径，并从文件系统中解析并读取源映射文件。但是，这种做法限制了库在 Node.js 环境下的使用，并且无法处理包含查询字符串的源文件。
-
-在 v2.0.0 中，你需要传递一个自定义的函数来执行文件读取操作。该函数将接收源文件名作为字符串类型的参数，你可以将其解析为文件系统路径、URL 或其他任何格式。
-
-如果你正在 Node.js 环境中使用 `convert-source-map` 并希望保留先前的行为，则可以使用以下类似的函数：
-
-```js
-+ var fs = require('fs'); // Import the fs module to read a file
-+ var path = require('path'); // Import the path module to resolve a path against your directory
-- var conv = convert.fromMapFileSource(css, '../my-dir');
-+ var conv = convert.fromMapFileSource(css, function (filename) {
-+   return fs.readFileSync(path.resolve('../my-dir', filename), 'utf-8');
-+ });
-```
-
-### fromMapFileSource
-
-fromMapFileSource(source, readMap)函数会在文件中查找最后一个sourcemap注释，如果找到则返回源映射转换器，否则返回null。
-
-readMap必须是一个函数，该函数接收源映射文件名作为参数，并返回源映射的字符串或缓冲区（如果是同步读取）或包含源映射字符串或缓冲区的Promise（如果是异步读取）。
-
-如果readMap不返回Promise，fromMapFileSource将同步返回源映射转换器。
-
-如果readMap返回Promise，则fromMapFileSource也将返回Promise。该Promise将被解析为源映射转换器或被拒绝为一个错误。
-
-在 `fromMapFileSource` 函数中，`source` 是指包含源映射信息的文件的源代码。该函数的目的是在源代码中查找最后一个 sourcemap 注释，并从 `readMap` 函数中读取与注释中指定的源映射信息相对应的源映射文件，然后返回一个源映射转换器，以便后续操作源映射信息。
 
 
+## loadAndTransform
 
 ```ts
 if (code) {
@@ -88,23 +155,7 @@ if (code) {
 
 如果提取源映射信息的过程中发生错误，则会捕获该错误并记录一个警告日志，告知用户加载源映射信息失败
 
-## createConvertSourceMapReadMap函数
-
-`convertSourceMap.fromMapFileSource()` 是 `convert-source-map` 库提供的一个方法，用于将源映射文件的内容转换为 JavaScript 对象或字符串。这个方法接收两个参数：
-
-- `code`: 要解析的源映射文件的内容。
-- `readmap`: 一个函数，用于读取源映射文件的内容。该函数接收一个参数 `filename`，表示要读取的文件路径，返回一个 Promise，该 Promise 的解析值为源映射文件的内容。
-
-在解析源映射文件的过程中，`convertSourceMap.fromMapFileSource()` 方法会使用 `readmap` 函数读取源映射文件的内容，并将其转换为 JavaScript 对象或字符串。
-
-```ts
-convertSourceMap.fromMapFileSource(
-            code,
-            createConvertSourceMapReadMap(file),
-          )
-```
-
-readmap函数读取指定文件名的文件内容并以 UTF-8 编码格式返回该文件的文本内容
+## createConvertSourceMapReadMap
 
 ```js
 function createConvertSourceMapReadMap(originalFileName: string) {
@@ -116,6 +167,27 @@ function createConvertSourceMapReadMap(originalFileName: string) {
   }
 }
 ```
+
+`createConvertSourceMapReadMap`实际上是`convertSourceMap.fromMapFileSource(source, readMap)`方法的第二个传参
+
+`source` 是指包含源映射信息的文件的源代码。 `readMap` 函数用于读取与注释中指定的源映射信息相对应的源映射文件，该函数会在 `source` 文件中查找最后一个 `sourcemap` 注释，如果找到则返回源映射转换器，以便后续操作源映射信息，否则返回null。
+
+`readMap` 必须是一个函数，该函数接收源映射文件名作为参数，并返回源映射的字符串或缓冲区（如果是同步读取）或包含源映射字符串或缓冲区的Promise（如果是异步读取）。
+
+如果 `readMap` 不返回Promise，`fromMapFileSource` 将同步返回源映射转换器。
+
+如果 `readMap` 返回Promise，则 `fromMapFileSource` 也将返回Promise。该Promise将被解析为源映射转换器或被拒绝为一个错误
+
+在解析源映射文件的过程中，`convertSourceMap.fromMapFileSource()` 方法会使用 `readmap` 函数读取源映射文件的内容，并将其转换为 JavaScript 对象或字符串。
+
+```ts
+convertSourceMap.fromMapFileSource(
+            code,
+            createConvertSourceMapReadMap(file),
+          )
+```
+
+readmap函数读取指定文件名的文件内容并以 UTF-8 编码格式返回该文件的文本内容
 
 ## path.dirname
 
