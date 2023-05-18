@@ -1,1 +1,0 @@
-import{_ as s,c as n,o as a,U as l}from"./chunks/framework.29dee80d.js";const A=JSON.parse('{"title":"完整代码","description":"","frontmatter":{},"headers":[],"relativePath":"热更新/watch.md","lastUpdated":1684378623000}'),p={name:"热更新/watch.md"},o=l("",16),e=[o];function c(r,t,B,y,i,F){return a(),n("div",null,e)}const b=s(p,[["render",c]]);export{A as __pageData,b as default};
