@@ -1,6 +1,6 @@
-# 完整代码
+#  `src/node/watch.ts`
 
-> 文件路径 `src/node/watch.ts`
+## 完整代码
 
 ```ts
 import glob from 'fast-glob'

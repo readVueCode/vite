@@ -1,6 +1,6 @@
-# 完整代码
+#  `src/node/server/sourcemap`
 
-> 文件路径 `src/node/server/sourcemap`
+## 完整代码
 
 ```ts
 import path from 'node:path'
@@ -171,8 +171,6 @@ export function createDebugger(
 
 `createDebugger` 函数的作用是根据给定的命名空间和选项创建一个调试器，并根据调试器的状态和条件输出调试信息。
 
-调试器的启用状态和输出内容可以通过选项进行配置，其中包括仅在 "focused"（聚焦）状态下输出调试信息以及应用过滤器。
-
 ```js
 export function createDebugger(
   namespace: ViteDebugScope,
@@ -188,11 +186,7 @@ export function createDebugger(
  const log = debug(namespace)
 ```
 
-然后，代码从 `options` 对象中提取 `onlyWhenFocused` 属性的值，并将其赋值给变量 `onlyWhenFocused`。
-
-```js
-const { onlyWhenFocused } = options
-```
+代码从 `options` 对象中提取 `onlyWhenFocused` 属性的值，并将其赋值给变量 `onlyWhenFocused`。
 
 接下来，代码使用变量 `log.enabled` 的值来确定调试器是否处于启用状态，并将结果赋值给变量 `enabled`。
 
@@ -201,7 +195,8 @@ const { onlyWhenFocused } = options
 然后，代码检查全局变量 `DEBUG` 是否存在，并且其中是否包含指定的命名空间 `ns`。如果是，则将 `enabled` 设置为 `true`，否则设置为 `false`。
 
 ```js
-  let enabled = log.enabled
+const { onlyWhenFocused } = options  
+let enabled = log.enabled
   if (enabled && onlyWhenFocused) {
     const ns = typeof onlyWhenFocused === 'string' ? onlyWhenFocused : namespace
     enabled = !!DEBUG?.includes(ns)
@@ -216,7 +211,7 @@ const { onlyWhenFocused } = options
 
 总结起来，`...args: [string, ...any[]]` 表示这个函数可以接受一个字符串作为第一个参数，后续参数的数量不限，并且可以是任意类型。
 
-返回的函数体内，它首先检查是否存在过滤器 `filter`，如果不存在或者传入的参数数组中至少有一个元素包含了 `filter`，则调用 `log(...args)`，输出调试信息。
+如果过滤值 `filter`即`process.env.VITE_DEBUG_FILTER`不存在或者传入的参数数组中至少有一个参数包含了 `filter`，则调用 `log(...args)`，输出调试信息。
 
 ```ts
 if (enabled) {
@@ -298,22 +293,22 @@ export async function injectSourcesContent(
 
 3. 在函数的末尾，如果`missingSources`数组不为空，则会发出警告，表明有一些源文件无法加载。这个警告会被日志记录器（`logger`）记录下来。如果定义了`debug`函数，则会将缺少的源文件的列表打印出来，方便进行调试。
 
-## genSourceMapUrl
+## 生成源代码映射文件的URL地址
 
-这是一个用于生成源代码映射文件的URL地址的函数。它接收一个名为`map`的参数，可以是字符串或对象类型的 SourceMap，然后将其转换为 Base64 编码的字符串，最后将它们拼接到一个 `data` URL 上，返回生成的 URL 地址字符串。
+```ts
+export function genSourceMapUrl(map: SourceMap | string): string {
+  if (typeof map !== 'string') {
+    map = JSON.stringify(map)
+  
+  return `data:application/json;base64,${Buffer.from(map).toString('base64')}`
+}
+```
+
+接收一个名为`map`的参数，可以是字符串或对象类型的 SourceMap，然后将其转换为 Base64 编码的字符串，最后将它们拼接到一个 `data` URL 上，返回生成的 URL 地址字符串。
 
 具体而言，函数首先检查 `map` 参数的类型，如果是一个对象，就将其转换为字符串类型。然后，使用 `Buffer.from()` 将字符串编码为 Base64，并将 `data` URL 的前缀和 Base64 编码的字符串拼接起来。最后，将生成的 URL 地址字符串返回。
 
 使用这个函数生成源代码映射文件的 URL 地址，可以用于在浏览器中调试 JavaScript 代码时，将源代码映射到编译后的代码。
-
-```js
-export function genSourceMapUrl(map: SourceMap | string): string {
-  if (typeof map !== 'string') {
-    map = JSON.stringify(map)
-  }
-  return `data:application/json;base64,${Buffer.from(map).toString('base64')}`
-}
-```
 
 ## getCodeWithSourcemap
 
