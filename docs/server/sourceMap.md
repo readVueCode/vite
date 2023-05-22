@@ -394,11 +394,36 @@ export function applySourcemapIgnoreList(
 - `logger`（可选）：类型为 `Logger` 的变量，一个日志记录器对象，用于输出警告信息。
 
 1. 首先，函数从 `map` 对象中提取 `x_google_ignoreList` 属性的值，并赋给变量 `{ x_google_ignoreList }`。
+
 2. 如果 `x_google_ignoreList` 的值为 `undefined`，则将其赋值为一个空数组 `[]`。
-3. 然后，使用 `for` 循环遍历 `map.sources` 数组中的每个元素。在每次循环中，它将当前源文件的路径赋给变量 `sourcePath`。如果 `sourcePath` 为空，则跳过当前循环。
-4. 接下来，函数调用 `sourcemapIgnoreList` 函数，传入源文件的绝对路径或者将其解析为绝对路径后的值，以及源映射文件的路径。`sourcemapIgnoreList` 函数返回一个布尔值，指示是否要忽略该源文件。
-5. 如果传入了 `logger` 并且 `ignoreList` 的类型不是布尔值，则记录一条警告信息，指出 `sourcemapIgnoreList` 函数必须返回布尔值。
-6. 如果 `ignoreList` 为 `true`，且当前源文件的索引在 `x_google_ignoreList` 数组中不存在，则将该索引添加到 `x_google_ignoreList` 数组中。
-7. 最后，如果 `x_google_ignoreList` 数组的长度大于 0，并且 `map` 对象中不存在 `x_google_ignoreList` 属性，则将 `x_google_ignoreList` 数组赋值给 `map.x_google_ignoreList`。
+
+3. 然后，使用 `for` 循环遍历 `map.sources` 数组中的每个元素。在这段代码中，使用 `++sourcesIndex` 和 `sourcesIndex++` 是等效的，因为它们都是对 `sourcesIndex` 变量进行递增操作。
+
+   `++sourcesIndex` 和 `sourcesIndex++` 都是自增操作符，它们的区别在于它们的返回值不同：
+
+   - `++sourcesIndex` 是前缀自增操作符，它会先将 `sourcesIndex` 的值加一，然后返回递增后的值。
+   - `sourcesIndex++` 是后缀自增操作符，它也会将 `sourcesIndex` 的值加一，但它返回的是递增前的值。
+
+   在这段代码中，循环的目的是遍历源映射对象的 `sources` 数组。通过使用 `++sourcesIndex` 或 `sourcesIndex++`，我们可以确保在每次迭代中，`sourcesIndex` 的值都会递增，以便访问下一个源文件路径。具体使用哪种自增形式取决于个人偏好，因为它们在这里的效果是相同的。
+
+4. 在每次循环中，它将当前源文件的路径赋给变量 `sourcePath`。如果 `sourcePath` 为空，则跳过当前循环。
+
+5. 接下来，函数调用 `sourcemapIgnoreList` 函数，传入源文件的绝对路径或者将其解析为绝对路径后的值，以及源映射文件的路径。`sourcemapIgnoreList` 函数返回一个布尔值，指示是否要忽略该源文件。
+
+6. 如果传入了 `logger` 并且 `ignoreList` 的类型不是布尔值，则输出警告信息，提醒`sourcemapIgnoreList`函数必须返回布尔值。
+
+7. 如果 `ignoreList` 为 `true`，且当前源文件的索引在 `x_google_ignoreList` 数组中不存在，则将该索引添加到 `x_google_ignoreList` 数组中。
+
+8. 最后，如果 `x_google_ignoreList` 数组的长度大于 0，并且 `map` 对象中不存在 `x_google_ignoreList` 属性，则将 `x_google_ignoreList` 数组赋值给 `map.x_google_ignoreList`。
 
 这个函数的作用是根据给定的源映射文件和源文件路径，通过回调函数来确定哪些源文件需要被忽略，并将需要忽略的源文件索引添加到原始源映射对象的 `x_google_ignoreList` 属性中。
+
+## 源文件和源映射文件
+
+在代码中，源文件（source file）指的是原始的、未经过编译或处理的代码文件，通常是开发人员编写的源代码文件，例如 JavaScript 文件、CSS 文件、或其他编程语言的源代码文件。
+
+而源映射文件（source map file）是一种与源文件相关的辅助文件，它提供了一种映射关系，将已经转换、压缩或混淆后的代码映射回原始的源代码。源映射文件通常以单独的文件形式存在，通常具有与源文件相同的文件名，但使用不同的扩展名（例如 `.map`）。
+
+源映射文件包含了一系列映射关系，用于将转换后的代码中的行号、列号等信息映射回源代码中的对应位置。这样，在调试或错误追踪时，可以通过源映射文件还原出源代码中的位置，以便更方便地理解和调试代码。
+
+源映射文件通常由编译器、转换工具或构建工具生成，并与转换后的代码一起部署到生产环境中。当在生产环境中遇到错误时，开发人员可以使用源映射文件来还原源代码位置，以便更容易地调试和修复问题。
