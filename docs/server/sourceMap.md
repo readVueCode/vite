@@ -180,7 +180,7 @@ export function createDebugger(
 }
 ```
 
-接下来，代码通过调用 `debug(namespace)` 创建了一个调试器，并将其赋值给变量 `log`。`debug` 函数来自于 `debug` 模块，它用于创建调试器实例，并指定调试器的名称。
+代码通过调用 `debug(namespace)` 创建了一个调试器，并将其赋值给变量 `log`。`debug` 函数来自于 `debug` 模块，它用于创建调试器实例，并指定调试器的名称。
 
 ```js
  const log = debug(namespace)

@@ -74,9 +74,9 @@ import { performance } from 'node:perf_hooks'
 global.__vite_start_time = performance.now()
 ```
 
-在 Node.js 环境中使用 `perf_hooks` 模块，提供了一组用于测量性能的工具，其中 `performance` 对象是其中一个重要的对象，用于获取高精度的时间戳和测量性能的指标。
+Node.js的`perf_hooks` 模块，提供了一组用于测量性能的工具，其中 `performance` 对象是其中一个重要的对象，用于获取高精度的时间戳和测量性能的指标。
 
-通过 `performance.now()` 方法获取当前的高精度时间戳，返回从性能计时器的起点（通常是脚本开始执行的时间）到当前时间的毫秒数，并将其保存在全局变量 `__vite_start_time` 中，以便后续在代码中使用这个起始时间点进行性能分析和计算时间差等操作。
+通过 `performance.now()` 方法获取当前的高精度时间戳：从性能计时器的起点（通常是脚本开始执行的时间）到当前时间的毫秒数，将其保存在全局变量 `__vite_start_time` 中，以便后续在代码中使用这个起始时间点进行性能分析和计算时间差等操作。
 
 ## 使用动态导入的方式加载`source-map-support`库
 
@@ -89,12 +89,9 @@ if (!import.meta.url.includes('node_modules')) {
 }
 ```
 
-这段代码的意图是在非`node_modules`模块中尝试使用动态导入的方式加载`source-map-support`库，并调用其 `install()` 方法，以提供源映射支持。
+在非`node_modules`模块中尝试使用动态导入的方式加载`source-map-support`库，以提供源映射支持，用于开发环境中方便调试和定位错误。如果加载或调用过程中发生错误，将会被捕获并忽略。
 
-用于开发环境中方便调试和定位错误。如果加载或调用过程中发生错误，将会被捕获并忽略。
-
-1. `import.meta.url` 是一个元数据对象，提供了有关当前模块的信息。`import.meta.url` 返回当前模块的 URL 地址。
-2. `import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串`'node_modules'`。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
+1. `import.meta.url` 返回当前模块的 URL 地址。`import.meta.url.includes('node_modules')` 表达式判断当前模块的 URL 是否包含字符串`'node_modules'`。如果返回值为 `false`，表示当前模块不是来自于 `node_modules` 目录，即非第三方模块。
 3. `await import('source-map-support').then((r) => r.default.install())` 使用动态导入的方式加载名为 `source-map-support`的模块，当 `source-map-support` 模块加载完成后，`.then()` 方法会被调用，并接收加载的模块作为参数。在这里，使用箭头函数 `(r) => r.default.install()`，其中 `r` 是加载的模块对象。`r.default` 是模块的默认导出对象，而 `.install()` 是 `source-map-support` 模块的一个方法。
 
 ## 启用性能分析器（Profiler）
@@ -123,7 +120,21 @@ if (profileIndex > 0) {
 }
 ```
 
-1. `process.argv`是一个包含命令行参数的数组。数组的第一个元素是 Node.js 的可执行文件路径，后续元素是命令行传递的参数。`.splice(profileIndex, 1)`是一个数组方法，用于修改数组，`profileIndex` 是要移除的元素的起始索引，而 `1` 表示从该索引开始，要移除的元素数量。因此，`process.argv.splice(profileIndex, 1)` 表示从 `process.argv` 数组中移除位于 `profileIndex` 索引处的一个元素，即删除命令行参数中的 `--profile` 参数。
+这段代码的作用是：根据命令行参数中是否存在`--profile`参数，来决定是否启用性能分析器，并在适当的时候连接到调试器进行性能分析
+
+1. 首先，使用`process.argv.indexOf('--profile')`获取命令行参数中`--profile`的索引位置，并将结果分配给`profileIndex`变量。`process.argv`是一个Node.js全局对象，它是一个包含命令行参数的数组。它的形式是：
+
+   ```js
+   [Node.js执行路径, 脚本文件路径, 参数1, 参数2, ...]
+   ```
+
+   其中，`process.argv[0]`是Node.js的执行路径，`process.argv[1]`是当前执行的脚本文件的路径，后续的元素是传递给脚本的命令行参数。
+
+2. 接下来，定义了一个名为`start`的函数，该函数通过`import`语法导入位于`../dist/node/cli.js`路径的模块。
+
+3. 然后，通过检查`profileIndex`是否大于0，判断是否存在`--profile`标志。
+
+4. 如果存在`--profile`标志，首先从`process.argv`数组中删除该标志，使用`process.argv.splice(profileIndex, 1)`。`.splice(profileIndex, 1)`中`profileIndex` 是要移除的元素的起始索引，而 `1` 表示从该索引开始，要移除的元素数量。因此，`process.argv.splice(profileIndex, 1)` 表示从 `process.argv` 数组中移除位于 `profileIndex` 索引处的一个元素，即删除命令行参数中的 `--profile` 参数。
 
 2. 因为上一步移除位于 `profileIndex` 索引处的一个元素，所以`const next = process.argv[profileIndex]`的元素是之前元素的下一个元素，即 `--profile` 参数的下一个参数
 
@@ -152,7 +163,7 @@ if (profileIndex > 0) {
    
    使用`node:inspector` 进行调试时，开发人员可以使用Chrome开发者工具的界面来查看调试信息，并与调试器进行交互。这提供了一个强大的工具来诊断和解决Node.js应用程序中的问题。
    
-6. 通过调用`session.connect()`方法，连接到调试器，与Chrome开发者工具建立通信通道。然后，使用`session.post()`方法发送命令给调试器。首先发送`'Profiler.enable'`命令以启用性能分析器。一旦性能分析器被启用，通过再次调用`session.post()`方法，发送`'Profiler.start'`命令，并传递一个名为`start`的回调函数作为参数。这个回调函数将在性能分析器开始记录之后执行。
+11. 通过调用`session.connect()`方法，连接到调试器，与Chrome开发者工具建立通信通道。然后，使用`session.post()`方法发送命令给调试器。首先发送`'Profiler.enable'`命令以启用性能分析器。一旦性能分析器被启用，通过再次调用`session.post()`方法，发送`'Profiler.start'`命令，并传递一个名为`start`的回调函数作为参数。这个回调函数将在性能分析器开始记录之后执行。
 
 
 
