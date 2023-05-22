@@ -342,7 +342,7 @@ export function getCodeWithSourcemap(
 
 最后，函数返回包含代码和 source map 信息的字符串。
 
-## applySourcemapIgnoreList
+## 应用源映射忽略列表`applySourcemapIgnoreList`
 
 ```ts
 export function applySourcemapIgnoreList(
@@ -384,55 +384,21 @@ export function applySourcemapIgnoreList(
 }
 ```
 
- `applySourcemapIgnoreList` 的导出函数。该函数接受以下参数：
+`applySourcemapIgnoreList` 函数的主要目的是将满足特定条件的源文件添加到 `x_google_ignoreList` 数组中。该数组是 `map` 对象的属性，用于记录应忽略的源文件索引。
+
+函数接受四个参数：
 
 - `map`：类型为 `ExistingRawSourceMap` 的变量，表示一个已存在的原始源映射。
 - `sourcemapPath`：类型为字符串的变量，表示源映射文件的路径。
-- `sourcemapIgnoreList`：类型为函数的变量，它接受两个参数：`sourcePath`（源文件路径）和 `sourcemapPath`（源映射文件路径），并返回一个布尔值。
-- `logger`（可选）：类型为 `Logger` 的变量，用于记录日志信息。
+- `sourcemapIgnoreList`：类型为函数的变量，一个回调函数，用于确定哪些源文件需要被忽略。该函数接受两个参数：`sourcePath`（源文件路径）和 `sourcemapPath`（源映射文件路径），并返回一个布尔值来表示是否忽略该源文件。
+- `logger`（可选）：类型为 `Logger` 的变量，一个日志记录器对象，用于输出警告信息。
 
-函数的主要目的是将满足特定条件的源文件添加到 `x_google_ignoreList` 数组中。该数组是 `map` 对象的属性，用于记录应忽略的源文件索引。
+1. 首先，函数从 `map` 对象中提取 `x_google_ignoreList` 属性的值，并赋给变量 `{ x_google_ignoreList }`。
+2. 如果 `x_google_ignoreList` 的值为 `undefined`，则将其赋值为一个空数组 `[]`。
+3. 然后，使用 `for` 循环遍历 `map.sources` 数组中的每个元素。在每次循环中，它将当前源文件的路径赋给变量 `sourcePath`。如果 `sourcePath` 为空，则跳过当前循环。
+4. 接下来，函数调用 `sourcemapIgnoreList` 函数，传入源文件的绝对路径或者将其解析为绝对路径后的值，以及源映射文件的路径。`sourcemapIgnoreList` 函数返回一个布尔值，指示是否要忽略该源文件。
+5. 如果传入了 `logger` 并且 `ignoreList` 的类型不是布尔值，则记录一条警告信息，指出 `sourcemapIgnoreList` 函数必须返回布尔值。
+6. 如果 `ignoreList` 为 `true`，且当前源文件的索引在 `x_google_ignoreList` 数组中不存在，则将该索引添加到 `x_google_ignoreList` 数组中。
+7. 最后，如果 `x_google_ignoreList` 数组的长度大于 0，并且 `map` 对象中不存在 `x_google_ignoreList` 属性，则将 `x_google_ignoreList` 数组赋值给 `map.x_google_ignoreList`。
 
-```js
-  let { x_google_ignoreList } = map
-  if (x_google_ignoreList === undefined) {
-    x_google_ignoreList = []
-  }
-```
-
-首先，函数从 `map` 对象中提取 `x_google_ignoreList` 属性的值，并赋给变量 `{ x_google_ignoreList }`。如果 `x_google_ignoreList` 的值为 `undefined`，则将其赋值为一个空数组 `[]`。
-
-```js
-  for (
-    let sourcesIndex = 0;
-    sourcesIndex < map.sources.length;
-    ++sourcesIndex
-  ) {
-    const sourcePath = map.sources[sourcesIndex]
-    if (!sourcePath) continue
-
-    const ignoreList = sourcemapIgnoreList(
-      path.isAbsolute(sourcePath)
-        ? sourcePath
-        : path.resolve(path.dirname(sourcemapPath), sourcePath),
-      sourcemapPath,
-    )
-    if (logger && typeof ignoreList !== 'boolean') {
-      logger.warn('sourcemapIgnoreList function must return a boolean.')
-    }
-
-    if (ignoreList && !x_google_ignoreList.includes(sourcesIndex)) {
-      x_google_ignoreList.push(sourcesIndex)
-    }
-  }
-```
-
-然后，函数使用 `for` 循环遍历 `map.sources` 数组中的每个元素。在每次循环中，它将当前源文件的路径赋给变量 `sourcePath`。如果 `sourcePath` 为空，则跳过当前循环。
-
-接下来，函数调用 `sourcemapIgnoreList` 函数，并传入源文件的绝对路径或者将其解析为绝对路径后的值，以及源映射文件的路径。`sourcemapIgnoreList` 函数返回一个布尔值，指示是否要忽略该源文件。如果传入了 `logger` 并且 `ignoreList` 的类型不是布尔值，则记录一条警告信息，指出 `sourcemapIgnoreList` 函数必须返回布尔值。
-
-如果 `ignoreList` 为 `true`，且当前源文件的索引在 `x_google_ignoreList` 数组中不存在，则将该索引添加到 `x_google_ignoreList` 数组中。
-
-最后，如果 `x_google_ignoreList` 数组的长度大于 0，并且 `map` 对象中不存在 `x_google_ignoreList` 属性，则将 `x_google_ignoreList` 数组赋值给 `map.x_google_ignoreList`。
-
-总之，该函数用于应用源文件忽略列表，根据一定的条件将满足条件的源文件索引添加到 `x_google_ignoreList` 数组中，并最终更新源映射对象的属性。
+这个函数的作用是根据给定的源映射文件和源文件路径，通过回调函数来确定哪些源文件需要被忽略，并将需要忽略的源文件索引添加到原始源映射对象的 `x_google_ignoreList` 属性中。
