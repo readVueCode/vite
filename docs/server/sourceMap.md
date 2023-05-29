@@ -137,7 +137,7 @@ const debug = createDebugger('vite:sourcemap', {
 })
 ```
 
-### `createDebugger`源码
+### `createDebugger`函数
 
 ```js
 import debug from 'debug'
@@ -171,59 +171,25 @@ export function createDebugger(
 
 `createDebugger` 函数的作用是根据给定的命名空间和选项创建一个调试器，并根据调试器的状态和条件输出调试信息。
 
-```js
-export function createDebugger(
-  namespace: ViteDebugScope,
-  options: DebuggerOptions = {},
-): debug.Debugger['log'] | undefined {
-  ...
-}
-```
+1. 通过调用 `debug(namespace)` 创建了一个调试器，并将其赋值给变量 `log`。`debug` 函数来自于 `debug` 库，它用于创建调试器实例，并指定调试器的名称。
+2. 然后，从 `options` 对象中提取 `onlyWhenFocused` 属性的值，并将其赋值给变量 `onlyWhenFocused`。
+3. 接下来，代码使用变量 `log.enabled` 的值来确定调试器是否处于启用状态，并将结果赋值给变量 `enabled`。
+4. 如果 `enabled` 为 `true`，并且 `onlyWhenFocused` 也为 `true`，则进入下一个条件判断。在这个条件中，代码首先根据 `onlyWhenFocused` 的类型（可能是字符串或布尔值）来确定需要验证的命名空间。检查全局变量 `DEBUG` 是否存在，并且其中是否包含指定的命名空间 `ns`。如果是，则将 `enabled` 设置为 `true`，否则设置为 `false`。
+5. 最后，如果 `enabled` 为 `true`，则返回一个函数，这个函数接受参数 `...args: [string, ...any[]]`，这里使用了 TypeScript 的语法。
+6. `...args`：这表示函数可以接受任意数量的参数。`...` 是展开操作符，它允许将多个参数打包成一个数组。`:`：这是 TypeScript 中用来指定类型的语法。在这里，它表示参数的类型。`[string, ...any[]]`：这是参数的类型注解。它指定了参数的类型为一个数组，其中第一个元素的类型是 `string`，后续的元素可以是任意类型。总结起来，`...args: [string, ...any[]]` 表示这个函数可以接受一个字符串作为第一个参数，后续参数的数量不限，并且可以是任意类型。
+7. 如果过滤值`filter`即`process.env.VITE_DEBUG_FILTER`不存在或者传入的参数数组中至少有一个参数包含了 `filter`，则调用 `log(...args)`，输出调试信息。
 
-代码通过调用 `debug(namespace)` 创建了一个调试器，并将其赋值给变量 `log`。`debug` 函数来自于 `debug` 模块，它用于创建调试器实例，并指定调试器的名称。
+## 什么是源文件和源映射文件
 
-```js
- const log = debug(namespace)
-```
+在代码中，源文件（source file）指的是原始的、未经过编译或处理的代码文件，通常是开发人员编写的源代码文件，例如 JavaScript 文件、CSS 文件、或其他编程语言的源代码文件。
 
-代码从 `options` 对象中提取 `onlyWhenFocused` 属性的值，并将其赋值给变量 `onlyWhenFocused`。
+而源映射文件（source map file）是一种与源文件相关的辅助文件，它提供了一种映射关系，将已经转换、压缩或混淆后的代码映射回原始的源代码。源映射文件通常以单独的文件形式存在，通常具有与源文件相同的文件名，但使用不同的扩展名（例如 `.map`）。source-map是一个用于调试JavaScript代码的技术，它可以将经过压缩的JavaScript代码映射回其原始源代码的位置。在开发大型JavaScript应用程序时，使用source-map可以帮助开发人员更快地调试代码并定位其中的错误。
 
-接下来，代码使用变量 `log.enabled` 的值来确定调试器是否处于启用状态，并将结果赋值给变量 `enabled`。
+源映射文件包含了一系列映射关系，用于将转换后的代码中的行号、列号等信息映射回源代码中的对应位置。这样，在调试或错误追踪时，可以通过源映射文件还原出源代码中的位置，以便更方便地理解和调试代码。
 
-如果 `enabled` 为 `true`，并且 `onlyWhenFocused` 也为 `true`，则进入下一个条件判断。在这个条件中，代码首先根据 `onlyWhenFocused` 的类型（可能是字符串或布尔值）来确定需要验证的命名空间。
+源映射文件通常由编译器、转换工具或构建工具生成，并与转换后的代码一起部署到生产环境中。当在生产环境中遇到错误时，开发人员可以使用源映射文件来还原源代码位置，以便更容易地调试和修复问题。
 
-然后，代码检查全局变量 `DEBUG` 是否存在，并且其中是否包含指定的命名空间 `ns`。如果是，则将 `enabled` 设置为 `true`，否则设置为 `false`。
-
-```js
-const { onlyWhenFocused } = options  
-let enabled = log.enabled
-  if (enabled && onlyWhenFocused) {
-    const ns = typeof onlyWhenFocused === 'string' ? onlyWhenFocused : namespace
-    enabled = !!DEBUG?.includes(ns)
-  }
-```
-
-最后，如果 `enabled` 为 `true`，则返回一个函数，这个函数接受参数 `...args: [string, ...any[]]`，这里使用了 TypeScript 的语法。
-
-1. `...args`：这表示函数可以接受任意数量的参数。`...` 是展开操作符，它允许将多个参数打包成一个数组。
-2. `:`：这是 TypeScript 中用来指定类型的语法。在这里，它表示参数的类型。
-3. `[string, ...any[]]`：这是参数的类型注解。它指定了参数的类型为一个数组，其中第一个元素的类型是 `string`，后续的元素可以是任意类型。
-
-总结起来，`...args: [string, ...any[]]` 表示这个函数可以接受一个字符串作为第一个参数，后续参数的数量不限，并且可以是任意类型。
-
-如果过滤值 `filter`即`process.env.VITE_DEBUG_FILTER`不存在或者传入的参数数组中至少有一个参数包含了 `filter`，则调用 `log(...args)`，输出调试信息。
-
-```ts
-if (enabled) {
-    return (...args: [string, ...any[]]) => {
-      if (!filter || args.some((a) => a?.includes?.(filter))) {
-        log(...args)
-      }
-    }
-  }
-```
-
-## 为sourcemap中的所有源文件加载源代码内容
+## 为sourcemap中的所有源文件加载源代码内容`injectSourcesContent`
 
 ```js
 // Virtual modules should be prefixed with a null byte to avoid a
@@ -293,24 +259,24 @@ export async function injectSourcesContent(
 
 3. 在函数的末尾，如果`missingSources`数组不为空，则会发出警告，表明有一些源文件无法加载。这个警告会被日志记录器（`logger`）记录下来。如果定义了`debug`函数，则会将缺少的源文件的列表打印出来，方便进行调试。
 
-## 生成源代码映射文件的URL地址
+## `genSourceMapUrl`：生成SourceMap文件的URL地址
 
 ```ts
 export function genSourceMapUrl(map: SourceMap | string): string {
   if (typeof map !== 'string') {
     map = JSON.stringify(map)
-  
+  }
   return `data:application/json;base64,${Buffer.from(map).toString('base64')}`
 }
 ```
 
-接收一个名为`map`的参数，可以是字符串或对象类型的 SourceMap，然后将其转换为 Base64 编码的字符串，最后将它们拼接到一个 `data` URL 上，返回生成的 URL 地址字符串。
+这个函数用于生成SourceMap文件的URL地址
 
-具体而言，函数首先检查 `map` 参数的类型，如果是一个对象，就将其转换为字符串类型。然后，使用 `Buffer.from()` 将字符串编码为 Base64，并将 `data` URL 的前缀和 Base64 编码的字符串拼接起来。最后，将生成的 URL 地址字符串返回。
+函数接收一个名为`map`的参数，可以是SourceMap对象类型或字符串类型，如果不是字符串，则说明是对象，就将其转换为字符串
 
-使用这个函数生成源代码映射文件的 URL 地址，可以用于在浏览器中调试 JavaScript 代码时，将源代码映射到编译后的代码。
+然后，使用 `Buffer.from()` 将字符串编码为 Base64，并将 `data` URL 的前缀和 Base64 编码的字符串拼接起来。最后，将生成的 URL 地址字符串返回。
 
-## getCodeWithSourcemap
+## `getCodeWithSourcemap`：获取带有Sourcemap的代码字符串
 
 ```ts
 export function getCodeWithSourcemap(
@@ -319,7 +285,7 @@ export function getCodeWithSourcemap(
   map: SourceMap,
 ): string {
   if (debug) {
-    code += `\n/*${JSON.stringify(map, null, 2).replace(/\*\//g, '*\\/')}*/\n`
+    code += `\n/*${JSON.stringify(map, null, 2).replace(/1\*\//g, '*\\/')}*/\n`
   }
 
   if (type === 'js') {
@@ -332,15 +298,55 @@ export function getCodeWithSourcemap(
 }
 ```
 
+函数的作用是将给定的 `code`（代码）和 `map`（源映射）结合起来，并返回一个带有源映射的字符串。
+
+接收三个参数：
+
 1. `type`，指定代码类型为 JavaScript 还是 CSS，类型为 `'js'` 或 `'css'`。
-2. `code`，包含 JavaScript 或 CSS 代码的字符串。
-3. `map`，表示源映射的对象，其中包含源代码和生成代码之间的映射信息。
+2. `code`，JavaScript 或 CSS 代码字符串。
+3. `map`，表示源映射文件，包含源代码和生成代码之间的映射信息。
 
-函数首先检查是否设置了 `debug` 标志，如果设置了，将源映射对象序列化为 JSON 格式，并添加为注释行附加到代码的末尾，以便调试使用。
+首先，函数检查是否启用了调试模式（`debug` 变量）。如果启用了调试模式，它会在 `code` 的末尾添加一个包含源映射的注释。注释使用 `JSON.stringify` 方法将源映射对象转换为字符串，并对斜杠进行转义。
 
-接着，函数根据代码类型添加相应的 source map 信息，这些信息在浏览器中用于调试时跟踪源代码和生成代码之间的对应关系。对于 JavaScript，会添加一个单独的注释行，指向生成的 source map 文件。对于 CSS，将 source map URL 包含在注释块中。
+`JSON.stringify(map, null, 2)`参数说明：
 
-最后，函数返回包含代码和 source map 信息的字符串。
+- 第一个参数 `map` 是要转换为 JSON 的 JavaScript 对象。
+- 第二个参数 `null` 是用于控制 JSON 字符串中的替换函数或数组的 replacer 参数。在这个例子中，没有指定 replacer，所以将其设置为 `null`。
+- 第三个参数 `2` 是用于控制 JSON 字符串的缩进的空格数。在这个例子中，缩进设置为 2，因此生成的 JSON 字符串会以 2 个空格缩进。
+
+通过使用这样的格式化，生成的 JSON 字符串将具有更易读的结构，每个键值对都会在单独的行上，并且会有适当的缩进。这样可以提高可读性，并方便调试和查看生成的源映射的内容。
+
+然后，根据 `type` 的值（可以是 `'js'` 或 `'css'`），函数在 `code` 的末尾添加一个指向源映射的注释。如果 `type` 是 `'js'`，则添加的注释是 `//# sourceMappingURL=<sourceMapUrl>`，如果 `type` 是 `'css'`，则添加的注释是 `/*# sourceMappingURL=<sourceMapUrl> */`。调用`genSourceMapUrl` 函数生成`<sourceMapUrl>`
+
+最后，函数返回拼接了源映射的 `code` 字符串。
+
+### 示例-js指向源映射的注释
+
+```js
+const type = 'js';
+const code = 'console.log("Hello, World!");';
+const map = { file: 'bundle.js.map', mappings: '...' };
+const codeWithSourcemap = getCodeWithSourcemap(type, code, map);
+console.log(codeWithSourcemap);
+```
+
+```js
+/*# sourceMappingURL=data:application/json;base64,eyJmaWxlIjoic3R5bGVzLmNzcy5tYXAiLCJtYXBwaW5ncyI6Ii4uLiJ9 */ 
+```
+
+### 示例-css指向源映射的注释
+
+```js
+const type = 'css';
+const code = 'body { background-color: #000; }';
+const map = { file: 'styles.css.map', mappings: '...' };
+const codeWithSourcemap = getCodeWithSourcemap(type, code, map);
+console.log(codeWithSourcemap);
+```
+
+```css
+/*# sourceMappingURL=data:application/json;base64,eyJmaWxlIjoiYnVuZGxlLmpzLm1hcCIsIm1hcHBpbmdzIjoiLi4uIn0= */ 
+```
 
 ## 应用源映射忽略列表`applySourcemapIgnoreList`
 
@@ -418,12 +424,3 @@ export function applySourcemapIgnoreList(
 
 这个函数的作用是根据给定的源映射文件和源文件路径，通过回调函数来确定哪些源文件需要被忽略，并将需要忽略的源文件索引添加到原始源映射对象的 `x_google_ignoreList` 属性中。
 
-## 源文件和源映射文件
-
-在代码中，源文件（source file）指的是原始的、未经过编译或处理的代码文件，通常是开发人员编写的源代码文件，例如 JavaScript 文件、CSS 文件、或其他编程语言的源代码文件。
-
-而源映射文件（source map file）是一种与源文件相关的辅助文件，它提供了一种映射关系，将已经转换、压缩或混淆后的代码映射回原始的源代码。源映射文件通常以单独的文件形式存在，通常具有与源文件相同的文件名，但使用不同的扩展名（例如 `.map`）。
-
-源映射文件包含了一系列映射关系，用于将转换后的代码中的行号、列号等信息映射回源代码中的对应位置。这样，在调试或错误追踪时，可以通过源映射文件还原出源代码中的位置，以便更方便地理解和调试代码。
-
-源映射文件通常由编译器、转换工具或构建工具生成，并与转换后的代码一起部署到生产环境中。当在生产环境中遇到错误时，开发人员可以使用源映射文件来还原源代码位置，以便更容易地调试和修复问题。
