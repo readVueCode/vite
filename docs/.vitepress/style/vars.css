@@ -2,7 +2,7 @@
 :root.dark {
   --vp-c-brand: #3ee0e0;
   --vp-c-green-light: #3ee0e0;
-  --vp-c-brand-lighter: #49CBF1;
+  --vp-c-brand-lighter: #49cbf1;
 }
 
 :root {
@@ -19,7 +19,11 @@
   --vp-home-hero-name-background: linear-gradient(#3c8cff 100%);
 
   /* 图标背景 */
-  --vp-home-hero-image-background-image: linear-gradient(135deg, #3c8cff 50%, #34a2e1 50%);
+  --vp-home-hero-image-background-image: linear-gradient(
+    135deg,
+    #3c8cff 50%,
+    #34a2e1 50%
+  );
   --vp-home-hero-image-filter: blur(56px);
 }
 
@@ -29,10 +33,10 @@
   --vp-button-brand-text: #fff;
   --vp-button-brand-bg: #3c8cff;
 
-  --vp-button-brand-hover-border: #6181FD;
-  --vp-button-brand-hover-bg: #6181FD;
-  --vp-button-brand-active-border: #6181FD;
-  --vp-button-brand-active-bg: #6181FD;
+  --vp-button-brand-hover-border: #6181fd;
+  --vp-button-brand-hover-bg: #6181fd;
+  --vp-button-brand-active-border: #6181fd;
+  --vp-button-brand-active-bg: #6181fd;
 
   /* 代码块背景色 */
   --vp-code-block-bg: rgba(40, 44, 52);
@@ -44,7 +48,7 @@
 }
 
 :root.dark {
-  --vp-c-text-code: #49CBF1;
+  --vp-c-text-code: #49cbf1;
 }
 
 /* HOME */
@@ -75,7 +79,7 @@ html {
 
 ::-webkit-scrollbar-thumb {
   border-radius: 10px;
-  background-color: #CCCCCC;
+  background-color: #cccccc;
 }
 
 @media (max-width: 1050px) {
@@ -94,4 +98,8 @@ html {
   .VPNavScreen {
     display: block !important;
   }
+}
+
+.vp-doc [class*='language-'] code {
+  white-space: pre-wrap;
 }

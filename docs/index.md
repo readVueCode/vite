@@ -10,7 +10,7 @@ hero:
   actions:
     - theme: brand
       text: 现在开始
-      link: /指南/1.热更新
+      link: /1.指南/源码解析
     - theme: alt
       text: View on GitHub
       link: https://github.com/readVueCode/vite

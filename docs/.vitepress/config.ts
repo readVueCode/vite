@@ -14,9 +14,14 @@ export default defineConfig({
   markdown: {
     lineNumbers: true,
     // https://github.com/shikijs/shiki/blob/main/docs/themes.md#all-themes
+    // one-dark-pro
+    // dark-plus
+    // min-dark
+    // dracula-soft
+    // dracula
     theme: {
-      light: 'min-dark',
-      dark: 'one-dark-pro',
+      light: 'one-dark-pro',
+      dark: 'dark-plus',
     },
   },
   themeConfig: {
