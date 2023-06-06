@@ -337,6 +337,18 @@ function createConvertSourceMapReadMap(originalFileName: string) {
 }
 ```
 
+## 导入导出
+
+```js
+import type { ModuleNode, ViteDevServer } from '..'
+```
+
+1. `import type`: 这是ES模块语法中的一种导入方式，用于导入仅用于类型检查的类型声明，而不实际导入模块的实际内容。
+2. `{ ModuleNode, ViteDevServer }`: 这是具体要导入的类型。
+3. `from '..'`: 这表示从上一级目录中的默认模块中进行导入。`..`表示上一级目录，而省略的模块名称表示默认模块。
+
+综上所述，这行代码的作用是从上一级目录的默认模块中导入名为`ModuleNode`和`ViteDevServer`的类型。请注意，这只是导入类型声明，而不是实际导入模块的内容。
+
 ## `transformRequest`：
 
 ```ts
@@ -367,6 +379,18 @@ export function transformRequest(
   //
   // We save the timestamp when we start processing and compare it with the
   // last time this module is invalidated
+
+  // 当我们处理模块时它可能会失效。例如，在重新处理预构建的依赖项时发现缺少某个依赖项后，可能需要进行完整的页面重新加载。我们保存当前时间，以便与最后一次使模块失效的时间进行比较，以确定我们应该缓存转换结果还是将其视为过期的。
+
+  //  模块可能会因以下原因而失效：
+  //  1. 由于预构建新发现的依赖项而进行的完整重新加载
+  //  2. 配置更改后的完整重新加载
+  //  3. 生成该模块的文件发生更改
+  //  4. 虚拟模块的失效
+
+  //  对于 1 和 2，当模块失效后，作为浏览器重新加载页面的一部分，将发起对该模块的新请求。对于情况3和4，由于热模块替换（HMR）处理的原因，可能不会立即发出新的请求。在所有情况下，下次请求该模块时，都应重新处理该模块。
+
+  // 我们在开始处理时保存时间戳，将其与最后一次使模块无效的时间进行比较
   const timestamp = Date.now()
 
   const pending = server._pendingRequests.get(cacheKey)
@@ -393,6 +417,7 @@ export function transformRequest(
   const request = doTransform(url, server, options, timestamp)
 
   // Avoid clearing the cache of future requests if aborted
+  // 避免在请求被中止（aborted）的情况下清除未来请求的缓存
   let cleared = false
   const clearCache = () => {
     if (!cleared) {
@@ -402,28 +427,20 @@ export function transformRequest(
   }
 
   // Cache the request and clear it once processing is done
+  // 缓存请求并在处理完成后清除缓存
   server._pendingRequests.set(cacheKey, {
     request,
     timestamp,
     abort: clearCache,
   })
+  // 在请求处理完成后，无论是成功还是失败，都会调用clearCache()函数进行缓存清除
+  // promise.then(onFulfilled, onRejected);
+  // promise 是一个 Promise 对象，onFulfilled 是一个函数，用于处理 Promise 对象状态变为 fulfilled（已完成）时的操作，onRejected 是一个函数，用于处理 Promise 对象状态变为 rejected（已拒绝）时的操作。
   request.then(clearCache, clearCache)
 
   return request
 }
 ```
-
-这段代码是一个函数，其名称为`transformRequest`。它接受三个参数：
-
-- `url`：表示要转换的资源的URL。
-- `server`：表示正在运行的Vite开发服务器实例。
-- `options`：包含用于转换过程的选项的对象。
-
-该函数的主要目的是对指定的资源进行转换，并返回转换结果。在转换资源之前，该函数会检查是否已经存在一个在处理中的请求（使用`_pendingRequests`缓存）。如果是，则等待该请求完成并返回其结果。否则，将启动新的转换请求，并将其添加到挂起请求列表中，以便可以在未来的请求中重用转换结果。
-
-在检查缓存之后，该函数调用名为`doTransform`的辅助函数，该函数执行实际的转换操作。在执行转换期间，该函数还会记录当前时间戳，并将其与最近一次无效化缓存的时间戳进行比较。如果缓存已经无效，那么就会尝试丢弃缓存并重新进行转换操作。
-
-最后，该函数会将新的转换请求添加到缓存中，并设置清除缓存的回调函数。当请求完成时（无论是成功还是失败），都会调用该回调函数清除缓存。这样做是为了确保不会在将来的请求中重用失效的转换结果。
 
 ## doTransform
 
