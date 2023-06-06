@@ -1,0 +1,1 @@
+import{_ as e,c as t,o as a}from"./chunks/framework.29dee80d.js";const _=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"client/overlay.md","lastUpdated":1686045194000}'),r={name:"client/overlay.md"};function o(c,n,s,l,p,d){return a(),t("div")}const m=e(r,[["render",o]]);export{_ as __pageData,m as default};
