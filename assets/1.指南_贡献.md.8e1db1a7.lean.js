@@ -1,0 +1,1 @@
+import{_ as s,c as a,o as n,U as e}from"./chunks/framework.29dee80d.js";const u=JSON.parse('{"title":"贡献","description":"","frontmatter":{},"headers":[],"relativePath":"1.指南/贡献.md","lastUpdated":1686042994000}'),l={name:"1.指南/贡献.md"},p=e("",18),o=[p];function c(t,i,r,d,b,m){return n(),a("div",null,o)}const D=s(l,[["render",c]]);export{u as __pageData,D as default};
